@@ -6,7 +6,7 @@ window.onload = setMap();
 function setMap(){
 	
 	//Example 2.1, creating a projection
-	var width = 960,
+	var width = 750,
 		height = 460;
 		
 	//2.1, create SVG container
@@ -16,12 +16,12 @@ function setMap(){
 		.attr("width", width)
 		.attr("height", height);
 		
-	//2.1, create Albers equal area conic projection for France
+	//2.1, create Albers equal area conic projection for New York
 	var projection = d3.geoAlbers()
-		.center([0, 46.2])
-		.rotate([-2, 0])
-		.parallels([43, 62])
-		.scale(2500)
+		.center([7.27, 40.87])
+		.rotate([81.00, -0.91, 0])
+		.parallels([29.5, 45.5])
+		.scale(5000.00)
 		.translate([width / 2, height / 2]);
 	
 	//Example 2.2, creating a path generator
@@ -29,43 +29,26 @@ function setMap(){
 		.projection(projection);
 		
 	var promises = [];
-	promises.push(d3.csv("data/unitsData.csv")); //load attribute data from csv
-	promises.push(d3.json("data/EuropeCountries.topojson")); //load background spatial data
-	promises.push(d3.json("data/FranceRegions.topojson")); //load spatial data for choropleth
-	//promises.push(d3.json("data/nyc-neighborhoods.topojson"));//load NYC neighborhoods
+	promises.push(d3.csv("data/nypl-data.csv")); //load attribute data from csv
+	promises.push(d3.json("data/nyc-neighborhoods.topojson"));//load NYC neighborhoods
 	Promise.all(promises).then(callback);
 	
 	//Example 1.4, callback to setMap()
 	function callback(data){
 		csvData = data[0];
-		europe = data[1];
-		france = data[2];
-		//nyc = data[2]
-		console.log(csvData);
-		console.log(europe);
-		//console.log(france);
-		
+		nyc = data[1];
+		//console.log(nyc)
+
 		//Example 1.5, convert TopoJSON to GeoJSON
-		var europeCountries = topojson.feature(europe, europe.objects.EuropeCountries),
-			franceRegions = topojson.feature(france, france.objects.FranceRegions).features;
-			//view results
-			console.log(europeCountries);
-			console.log(franceRegions);
-		//var nycNeighborhoods = topojson.feature (nyc, nyc.objects.nycNeighborhoods).features;
+		var nycNeighborhoods = topojson.feature (nyc, nyc.objects.nycNeighborhoods).features;
 		
 		//Example 2.3, draw geometries
-		//add europe
-		var countries = map.append("path")
-			.datum(europeCountries)
-			.attr("class", "countries")
-			.attr("d", path);
-		//add france
-		var regions = map.selectAll(".regions")
-			.data(franceRegions)
-			.enter()
-			.append("path")
+		//add Manhattan
+		var nyc = map.append("path")
+			.datum(nyc)
+			//.enter()
 			.attr("class", function(d){
-				return "regions " + d.properties.adm1_code;	
+				return "nycNeighborhoods " + d.properties.nta-name;
 			})
 			.attr("d", path);
 			
@@ -76,7 +59,7 @@ function setMap(){
 			.data(graticule.lines()) //bind graticule lines to element
 			.enter()//create element for each datum
 			.append("path") //append each element to svg
-			.attr("class", "gratLInes")//assign class for styling
+			.attr("class", "gratLines")//assign class for styling
 			.attr("d", path);//project graticule lines
 	};
 	

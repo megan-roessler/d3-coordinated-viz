@@ -22,18 +22,4 @@
 /*Example 2.9, Framing the map*/
 .map {
 	border: medium solid #999;
-	margin: 10px 0 0 20px;
-}
-
-.chart {
-	background-color: rgba(128,128,128,.2);
-	border: medium solid #999;
-	float: right;
-	margin: 10px 20px 0 0;
-}
-
-.chartTitle {
-	font-family: sans-serif;
-	font-size: 1.5em;
-	font-weight: bold;
 }
