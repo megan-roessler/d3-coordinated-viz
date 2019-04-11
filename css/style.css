@@ -1,13 +1,14 @@
-/* Example 2.4, Styling country borders */
-.countries {
-	fill: #FFF;
-	stroke: #CCC;
-	stroke-width: 2px;
-}
+/* Example 2.4, Styling borders */
 .nyc {
 	fill: #FFF;
 	stroke: #CCC;
-	stroke-width: 2px;
+	stroke-width: .5px;
+}
+
+.manhattan {
+	fill: #FFF;
+	stroke: black;
+	stroke-width: .5px;
 }
 /* Example 2.7, Graticule line styles */
 .gratLines {

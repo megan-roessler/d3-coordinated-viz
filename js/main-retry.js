@@ -7,7 +7,7 @@ D3 Coordinated Viz
 (function(){
 
 //Module 3, Ex. 1.1, Join CSV to geojson
-var attrArray = ["Boro/Central Library", "nta-name", "Branch", "ADULT Attendance", "YOUNG ADULT Attendance", "JUVENILE Attendance", "CIRCULATION Adult", "CIRCULATION Young Adult", "CIRCULATION Juvenile", "CIRCULATION"];
+var attrArray = ["Boro/Central Library", "ntaName", "Branch", "ADULT Attendance", "YOUNG ADULT Attendance", "JUVENILE Attendance", "CIRCULATION Adult", "CIRCULATION Young Adult", "CIRCULATION Juvenile", "CIRCULATION"];
 var expressed = attrArray[3]//Initial attribute
 
 //begin script when window loads
@@ -16,8 +16,8 @@ window.onload = setMap();
 //set up choropleth map
 function setMap(){
 	//map frame dimensions
-	var width = window.innerWidth * 0.5,
-		height = 460;
+	var width = window.innerWidth * 0.55,
+		height = 500;
 
 	//create new svg container for the map
 	var map = d3.select("body")
@@ -28,11 +28,11 @@ function setMap(){
 
 	//create Albers equal area conic projection centered on Manhattan
 	var projection = d3.geoAlbers()
-	.center([7.27, 40.87])
-	.rotate([81, 0, 0])
-	.parallels([29.5, 45.5])
-	.scale(5000.00)
-	.translate([width / 2, height / 2]);
+		.center([0, 40.75])
+		.rotate([74, 0, 0])
+		.parallels([29.5, 45.5])
+		.scale(155000)
+		.translate([width / 2, height / 2]);
 
 	var path = d3.geoPath()
 		.projection(projection);
@@ -54,24 +54,34 @@ function setMap(){
 		setGraticule(map, path);
 		
 		//translate NYC and Manhattan TopoJSON
-		var nycNeighborhoods = topojson.feature(nyc, nyc.objects.nycNTA),
+		console.log(nyc.objects);
+		console.log(manhattan.objects);
+		var nycNeighborhoods = topojson.feature(nyc, nyc.objects["nyc-neighborhoods"]),
 			manhattanNeighborhoods = topojson.feature(manhattan, manhattan.objects.manhattan).features;
-		
+			
 		//add NYC to map
 		var nyc = map.append("path")
-			.datum(nycNTA)
-			.enter()
+			.datum(nycNeighborhoods)
 			.attr("class", "nyc")
 			.attr("d", path);
-
-		//join csv data to GeoJSON enumeration units
-		manhattanNeighborhoods = joinData(manhattanNeighborhoods, csvData);
+			
+		var manhattan = map.selectAll(".manhattan")
+			.data(manhattanNeighborhoods)
+			.enter()
+			.append("path")
+			.attr("class", function(d){
+				return "manhattan " + d.properties.ntaName;
+			})
+			.attr("d",path);
+			
+			//join csv data to GeoJSON enumeration units
+		manhattan = joinData(manhattan, csvData);
 
 		//Module 3, Ex. 1.4, Create color scale
-		var colorScale = makeColorScale(csvData);
+		//var colorScale = makeColorScale(csvData);
 
 		//add enumeration units to the map
-		setEnumerationUnits(manhattanNeighborhoods, map, path, colorScale);
+		setEnumerationUnits(manhattan, map, path);
 	};
 }; //end of setMap()
 
@@ -95,17 +105,17 @@ function setGraticule(map, path){
 		.attr("d", path); 
 };
 
-function joinData (manhattanNeighborhoods, csvData){
+function joinData (manhattan, csvData){
 	//Loop through csv to assign each set of csv attribute vals to geojson region
 	for (var i=0; i<csvData.length; i++){
 		var csvName = csvData[i];//current region
-		var csvKey = nta.ntaName;//SOMETHING IS WRONG HERE
+		var csvKey = csvName.ntaName;//SOMETHING IS WRONG HERE
 		
 		//Loop through geojson areas to find correct one
-		for (var a=0; a<nyc.length; a++){
+		for (var a=0; a<manhattan.length; a++){
 			
 			var geojsonProps = manhattan[a].properties;//current properties
-			var geojsonKey = geojsonProps.ntaName;//geojson primary key
+			var geojsonKey = geojsonProps.ntaName//geojson primary key
 			
 			//transfer csv data where keys match
 			if (geojsonKey == csvKey){
@@ -117,36 +127,7 @@ function joinData (manhattanNeighborhoods, csvData){
 			};
 		};
 	};
-	return manhattanNeighborhoods;
-};
-
-
-//function to set enumeration units
-function setEnumerationUnits(manhattanNeighborhoods, map, path, colorScale){
-
-	//add Manhattan NTAs to map
-	var NTA = map.selectAll(".nta")
-		.data(manhattanNeighborhoods)
-		.enter()
-		.append("path")
-		.attr("class", function(d){
-			return "NTA " + d.properties.ntaName;
-		})
-		.attr("d", path)
-		.style("fill", function(d){
-			return choropleth(d.properties, colorScale);
-		})
-		.on("mouseover", function(d){
-			highlight(d.properties);
-		})
-		.on("mouseout", function(d){
-			dehighlight(d.properties);
-		})
-		.on("mousemove", moveLabel);
-
-	//add style descriptor to each path
-	var desc = NTA.append("desc")
-		.text('{"stroke": "#000", "stroke-width": "0.5px"}');
+	return manhattan;
 };
 
 //Module 3, Ex. 1.4, Create QUANTILE color scale
@@ -173,6 +154,28 @@ function makeColorScale(data){
 	colorScale.domain(domainArray);
 	
 	return colorScale;
+};
+
+//Ex. 1.3, setting enumeration units
+//Ex. 1.7, Coloring enumeration units
+function setEnumerationUnits(manhattan, map, path, colorScale){
+
+	//add Manhattan NTAs to map
+	var NTA = map.selectAll(".nta")
+		.data(manhattan)
+		.enter()
+		.append("path")
+		.attr("class", function(d){
+			return "NTA " + d.properties.ntaName;
+		})
+		.attr("d", path)
+		.style("fill", function(d){
+			return colorScale(d.properties,[expressed]);
+		});
+
+/* 	//add style descriptor to each path
+	var desc = NTA.append("desc")
+		.text('{"stroke": "#000", "stroke-width": "0.5px"}'); */
 };
 
 //Ex. 1.8, choropleth helper function
@@ -216,7 +219,7 @@ function setChart (csvData, colorScale){
 	//set y scale for proportional bars
 	var yScale = d3.scaleLinear()
 		.range([463, 0])
-		.domain([0, 100]);
+		.domain([0, 100]); //CHANGE TO MIN/MAX VALUES FROM YOUR DATA!
 	
 	//set bars for each NTA
 	var bars = chart.selectAll(".bar")
@@ -246,3 +249,14 @@ function setChart (csvData, colorScale){
 };
 
 })();//last line of main.js
+
+
+/* For Module 10:
+Making map responsive
+Transitions make better visual effects (D3 Transition method)
+Adding mouseover effects (call 'highlight' function to change style of existing region, 'dehighlight' pulls that effect)
+Dynamic labels show att value of region (labels are easy to create, label follows mouse w dynamic retrieval)
+^ last part of tutorial
+**Scale of attributes may vary from attribute to attribute (bars might exceed chart area), we want it to dynamically fit
+	- When creating y scale, pick one that works for the first value
+	- Add min/max to changeAttribute function... change y scale upon selection of a new attribute */
