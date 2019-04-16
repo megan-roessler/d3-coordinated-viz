@@ -3,11 +3,12 @@ Geography 575
 D3 Coordinated Viz
 ------------------------ */
 
-//Module 3, Ex. 1.2, Definine attrArray and expressed
+//Module 9, Ex. 1.2, Definine attrArray and expressed
 (function(){
 
-//Module 3, Ex. 1.1, Join CSV to geojson
-var attrArray = ["Boro/Central Library", "ntaName", "Branch", "ADULT Attendance", "YOUNG ADULT Attendance", "JUVENILE Attendance", "CIRCULATION Adult", "CIRCULATION Young Adult", "CIRCULATION Juvenile", "CIRCULATION"];
+//Module 9, Ex. 1.2, Join CSV to geojson
+//pseudo-global variables
+var attrArray = ["Boro", "ntaName", "Branch", "totalLibraries", "ADULT Attendance", "YOUNG ADULT Attendance", "JUVENILE Attendance", "CIRCULATION Adult", "CIRCULATION Young Adult", "CIRCULATION Juvenile", "CIRCULATION"];
 var expressed = attrArray[3]//Initial attribute
 
 //begin script when window loads
@@ -17,7 +18,7 @@ window.onload = setMap();
 function setMap(){
 	//map frame dimensions
 	var width = window.innerWidth * 0.55,
-		height = 500;
+		height = 550;
 
 	//create new svg container for the map
 	var map = d3.select("body")
@@ -28,8 +29,8 @@ function setMap(){
 
 	//create Albers equal area conic projection centered on Manhattan
 	var projection = d3.geoAlbers()
-		.center([0, 40.75])
-		.rotate([74, 0, 0])
+		.center([0, 40.79])
+		.rotate([73.95, 0, 0])
 		.parallels([29.5, 45.5])
 		.scale(155000)
 		.translate([width / 2, height / 2]);
@@ -65,20 +66,20 @@ function setMap(){
 			.attr("class", "nyc")
 			.attr("d", path);
 			
-		var manhattan = map.selectAll(".manhattan")
+/* 		var manhattan = map.selectAll(".manhattan")
 			.data(manhattanNeighborhoods)
 			.enter()
 			.append("path")
 			.attr("class", function(d){
 				return "manhattan " + d.properties.ntaName;
 			})
-			.attr("d",path);
+			.attr("d",path); */
 			
-			//join csv data to GeoJSON enumeration units
+		//join csv data to GeoJSON enumeration units
 		manhattan = joinData(manhattan, csvData);
 
 		//Module 3, Ex. 1.4, Create color scale
-		//var colorScale = makeColorScale(csvData);
+		var colorScale = makeColorScale(csvData);
 
 		//add enumeration units to the map
 		setEnumerationUnits(manhattan, map, path);
@@ -108,25 +109,27 @@ function setGraticule(map, path){
 function joinData (manhattan, csvData){
 	//Loop through csv to assign each set of csv attribute vals to geojson region
 	for (var i=0; i<csvData.length; i++){
-		var csvName = csvData[i];//current region
-		var csvKey = csvName.ntaName;//SOMETHING IS WRONG HERE
+		var csvNta = csvData[i];//current region
+		var csvKey = csvNta.ntaname;//SOMETHING IS WRONG HERE
 		
 		//Loop through geojson areas to find correct one
 		for (var a=0; a<manhattan.length; a++){
 			
 			var geojsonProps = manhattan[a].properties;//current properties
-			var geojsonKey = geojsonProps.ntaName//geojson primary key
+			var geojsonKey = geojsonProps.ntaname//geojson primary key
 			
 			//transfer csv data where keys match
 			if (geojsonKey == csvKey){
-				//assign all attributes and values
+				
+				//assign attributes and values
 				attrArray.forEach(function(attr){
-					var val = parseFloat(csvName[attr]);//get csv att value
+					var val = parseFloat(csvNta[attr]);//get csv att value
 					geojsonProps[attr] = val;//assign attribute value to geojson props
 				});
 			};
 		};
 	};
+	
 	return manhattan;
 };
 
@@ -156,23 +159,22 @@ function makeColorScale(data){
 	return colorScale;
 };
 
-//Ex. 1.3, setting enumeration units
-//Ex. 1.7, Coloring enumeration units
+//Ex. 1.3, setting enumeration units, Ex. 1.7, Color enumeration units
 function setEnumerationUnits(manhattan, map, path, colorScale){
 
 	//add Manhattan NTAs to map
-	var NTA = map.selectAll(".nta")
+	var manhattan = map.selectAll(".manhattan")
 		.data(manhattan)
 		.enter()
 		.append("path")
 		.attr("class", function(d){
-			return "NTA " + d.properties.ntaName;
+			return "manhattan " + d.properties.ntaname;
 		})
 		.attr("d", path)
 		.style("fill", function(d){
 			return colorScale(d.properties,[expressed]);
 		});
-
+		
 /* 	//add style descriptor to each path
 	var desc = NTA.append("desc")
 		.text('{"stroke": "#000", "stroke-width": "0.5px"}'); */
