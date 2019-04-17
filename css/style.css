@@ -91,6 +91,8 @@ option {
 	position: absolute;
 	height: 50px;
 	min-width: 100px;
+	max-width: 200px;
+	/*border-radius: 25px;*/
 	color: #fff;
 	background-color: #000;
 	border: solid thin #fff;
