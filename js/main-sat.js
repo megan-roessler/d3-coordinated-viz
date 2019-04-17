@@ -8,9 +8,9 @@
 //pseudo-global variables
 var attrArray = ["Boro", "ntaname", "ntacode", "Branch", "Total Libraries", "Average Adult Attendance", "Average Young Adult Attendance", "Average Juvenile Attendance", "Average Adult Circulation", "Average Young Adult Circulation", "Average Juvenile Circulation", "Average Total Circulation"]; //list of attributes
 var expressed = attrArray[4]; //initial attribute
-//console.log(attrArray);
+
 //chart frame dimensions
-var chartWidth = window.innerWidth * 0.45,
+var chartWidth = window.innerWidth * 0.525,
 	chartHeight = 550,
 	leftPadding = 40,
 	rightPadding = 2,
@@ -22,8 +22,8 @@ var chartWidth = window.innerWidth * 0.45,
 //create a scale to size bars proportionally to frame and for axis
 var yScale = d3.scaleLinear()
 	.range([540, 0])
-	.domain([0, 5])
-	.nice();
+	.domain([0, 4000]);
+	//.nice();
 
 //begin script when window loads
 window.onload = setMap();
@@ -31,7 +31,7 @@ window.onload = setMap();
 //set up choropleth map
 function setMap(){
 	//map frame dimensions
-	var width = window.innerWidth * 0.5,
+	var width = window.innerWidth * 0.40,
 		height = 540;
 
 	//create new svg container for the map
@@ -51,13 +51,8 @@ function setMap(){
 
 	var path = d3.geoPath()
 		.projection(projection);
-
-	//use queue.js to parallelize asynchronous data loading
-	// queue()
-	// 	.defer(d3.csv, "data/unitsData.csv") //load attributes from csv
-	// 	.defer(d3.json, "data/EuropeCountries.topojson") //load background spatial data
-	// 	.defer(d3.json, "data/FranceRegions.topojson") //load choropleth spatial data
-	// 	.await(callback);
+		
+	//Bring in data
 	var promises = [];
 	promises.push(d3.csv("data/nyplData.csv"));
 	promises.push(d3.json("data/nycNTA.topojson"));
@@ -80,20 +75,22 @@ function setMap(){
 		var nycNeighborhoods = topojson.feature(nyc, nyc.objects["nyc-neighborhoods"]),
 			manhattanNeighborhoods = topojson.feature(manhattan, manhattan.objects.manhattan).features;
 
-		//add Europe countries to map
+		//add New York to map
 		var nyc = map.append("path")
 			.datum(nycNeighborhoods)
 			.attr("class", "nyc")
 			.attr("d", path);
 
 		//join csv data to GeoJSON enumeration units
-		manhattan = joinData(manhattan, csvData);
+		manhattan = joinData(manhattanNeighborhoods, csvData);
 		//console.log(manhattan);
 		
-		//create the color scale
+		//create color scale
 		var colorScale = makeColorScale(csvData);
 
 		//add enumeration units to the map
+		//Use manhattanNeighborhoods NOT manhattan
+		//setEnumerationUnits(manhattan, map, path, colorScale);
 		setEnumerationUnits(manhattanNeighborhoods, map, path, colorScale);
 
 		//add coordinated visualization to the map
@@ -104,6 +101,7 @@ function setMap(){
 	};
 }; //end of setMap()
 
+//Set graticule
 function setGraticule(map, path){
 	//create graticule generator
 	var graticule = d3.geoGraticule()
@@ -124,17 +122,17 @@ function setGraticule(map, path){
 		.attr("d", path); //project graticule lines
 };
 
+//Join csv data to TopoJSON
 function joinData(manhattan, csvData){
+	
 	//loop through csv to assign each set of csv attribute values to geojson region
 	for (var i=0; i < csvData.length; i++){
-		
 		var csvRegion = csvData[i]; //the current region
-		
 		var csvKey = csvRegion.ntacode; //the CSV primary key
 
 		//loop through geojson regions to find correct region
 		for (var a=0; a < manhattan.length; a++){
-			//console.log(manhattan.length);
+
 			var geojsonProps = manhattan[a].properties; //the current region geojson properties
 			var geojsonKey = geojsonProps.ntacode; //the geojson primary key
 
@@ -153,7 +151,7 @@ function joinData(manhattan, csvData){
 	return manhattan;
 };
 
-function setEnumerationUnits(manhattan, map, path, colorScale){
+function setEnumerationUnits(manhattan, map, path, colorScale,){
 
 	//add Manhattan NTAs to map
 	var manhattan = map.selectAll(".manhattan")
@@ -167,30 +165,26 @@ function setEnumerationUnits(manhattan, map, path, colorScale){
 		.style("fill", function(d){
 			return choropleth(d.properties, colorScale);
 		})
-		.on("mouseover", function(d){
-			highlight(d.properties);
-		})
-		.on("mouseout", function(d){
-			dehighlight(d.properties);
-		})
-		.on("mousemove", moveLabel);
-
+		.on("mouseover", highlight)
+		.on("mouseout", dehighlight)
+		//.on("mousemove", moveLabel);//
+		
 	//add style descriptor to each path
 	var desc = manhattan.append("desc")
 		.text('{"stroke": "#000", "stroke-width": "0.5px"}');
 };
 
 //function to create color scale generator
+//define colors
 function makeColorScale(data){
 	var colorClasses = [
-		"#F0F9E8",
-		"#BAE4BC",
-		"#7BCCC4",
-		"#43A2CA",
-		"#0868AC"
+		"#FFFFD4",
+		"#FED98E",
+		"#FE9929",
+		"#D95F0E",
+		"#993404"
 	];
 
-	//NATURAL BREAKS SCALE
 	//create color scale generator
 	var colorScale = d3.scaleThreshold()
 		.range(colorClasses);
@@ -221,6 +215,7 @@ function makeColorScale(data){
 function choropleth(props, colorScale){
 	//make sure attribute value is a number
 	var val = parseFloat(props[expressed]);
+	
 	//if attribute value exists, assign a color; otherwise assign gray
 	if (val && val != NaN){
 		return colorScale(val);
@@ -230,6 +225,7 @@ function choropleth(props, colorScale){
 };
 
 //function to create coordinated bar chart
+//Add interactions
 function setChart(csvData, colorScale){
 	//create a second svg element to hold the bar chart
 	var chart = d3.select("body")
@@ -257,7 +253,7 @@ function setChart(csvData, colorScale){
 			return "bar " + d.ntacode;
 		})
 		.attr("width", chartInnerWidth / csvData.length - 1)
-		.on("mouseover", highlight)
+		.on("mouseover", highlight);
 /* 		.on("mouseout", dehighlight)
 		.on("mousemove", moveLabel) */;
 
@@ -267,7 +263,7 @@ function setChart(csvData, colorScale){
 
 	//create a text element for the chart title
 	var chartTitle = chart.append("text")
-		.attr("x", 40)
+		.attr("x", 55)
 		.attr("y", 40)
 		.attr("class", "chartTitle");
 
@@ -328,7 +324,7 @@ function changeAttribute(attribute, csvData){
 	var colorScale = makeColorScale(csvData);
 
 	//recolor enumeration units
-	var regions = d3.selectAll(".regions")
+	var manhattan = d3.selectAll(".manhattan")
 		.transition()
 		.duration(1000)
 		.style("fill", function(d){
@@ -358,6 +354,8 @@ function updateChart(bars, n, colorScale){
 		})
 		//size/resize bars
 		.attr("height", function(d, i){
+/* 			.domain([0, d3.max(csvData, function(d) { return d.y + 10;})])
+			.range([margin.top, h - margin.bottom]); */
 			return 540 - yScale(parseFloat(d[expressed]));
 		})
 		.attr("y", function(d, i){
@@ -376,13 +374,12 @@ function updateChart(bars, n, colorScale){
 
 //function to highlight enumeration units and bars
 function highlight(props){
-	//change stroke
-	var selected = d3.selectAll("." + props.ntaname)
-		.style({
-			"stroke": "white",
-			"stroke-width": "2"
-		});
-
+	//var ntaname = expressed.ntaname
+	var selected = d3.selectAll(props.ntaname)
+		//change stroke
+		.style("stroke", "blue")
+		.style("stroke-width", "2");
+	console.log(props.ntaname)
 	setLabel(props);
 };
 
@@ -395,13 +392,18 @@ function setLabel(props){
 	//create info label div
 	var infolabel = d3.select("body")
 		.append("div")
-		.attr({
-			"class": "infolabel",
-			"id": props.ntaname + "_label"
-		})
+		.attr("class", "infolabel")
+		.attr("id", props.ntaname + "_label")
 		.html(labelAttribute);
 
 	//console.log(labelAttribute);
+	//try to create tooltip
+/* 	var tooltip = d3.select("manhattan")
+		.append("div")
+		.style("position", "absolute")
+		.style("z-index", "10")
+		.style("visibility", "hidden")
+		.text("A Simple Tooltip"); */
 
 	var ntaname = infolabel.append("div")
 		.attr("class", "labelname")
@@ -410,7 +412,7 @@ function setLabel(props){
 
 //function to reset the element style on mouseout
 function dehighlight(props){
-	var selected = d3.selectAll("." + props.ntaname)
+	var selected = d3.selectAll("props.ntacode")
 		.style({
 			"stroke": function(){
 				return getStyle(this, "stroke")
@@ -431,7 +433,7 @@ function dehighlight(props){
 		return styleObject[styleName];
 	};
 
-	//remove info label
+ 	//remove info label
 	d3.select(".infolabel")
 		.remove();
 };
@@ -445,7 +447,6 @@ function moveLabel(){
 		.getBoundingClientRect()
 		.width;
 
-
 	//use coordinates of mousemove event to set label coordinates
 	var x1 = d3.event.clientX + 10,
 		y1 = d3.event.clientY - 75,
@@ -456,7 +457,6 @@ function moveLabel(){
 	var x = d3.event.clientX > window.innerWidth - labelWidth - 20 ? x2 : x1; 
 	//vertical label coordinate, testing for overflow
 	var y = d3.event.clientY < 75 ? y2 : y1; 
-
 
 	d3.select(".infolabel")
 		.styles({
