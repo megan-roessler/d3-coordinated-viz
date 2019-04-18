@@ -156,7 +156,7 @@ function joinData(manhattan, csvData){
 function setEnumerationUnits(manhattan, map, path, colorScale,){
 
 	//add Manhattan NTAs to map
-	var manhattan = map.selectAll(".manhattan")
+	var manhattan = map.selectAll("manhattan.ntacode")
 		.data(manhattan)
 		.enter()
 		.append("path")
@@ -167,8 +167,12 @@ function setEnumerationUnits(manhattan, map, path, colorScale,){
 		.style("fill", function(d){
 			return choropleth(d.properties, colorScale);
 		})
-		.on("mouseover", highlight)
-		//.on("mouseout", dehighlight)
+		.on("mouseover", function(d){
+			highlight(d.properties);
+		})
+		.on("mouseout", function(d){
+			dehighlight(d.properties);
+		})
 		.on("mousemove", moveLabel);
 		
 	//add style descriptor to each path
@@ -257,7 +261,7 @@ function setChart(csvData, colorScale){
 		.attr("width", chartInnerWidth / csvData.length - 1)
 		//.attr("height", chartInnerHeight)
 		.on("mouseover", highlight)
- 		//.on("mouseout", dehighlight)
+ 		.on("mouseout", dehighlight)
 		.on("mousemove", moveLabel);
 
 	//add style descriptor to each rect
@@ -354,13 +358,6 @@ function changeAttribute(attribute, csvData){
 //function to position, size, and color bars in chart
 function updateChart(bars, n, colorScale){
 	
-	//find max for dynamic yScale
-	var findYMax = function(data){
-		return d3.max(data, function(d){
-			return Math.max(d.expressed);
-		});
-	}
-	
 	//var yAxis = d3.selectAll(".findYMax")
 	
 	//position bars
@@ -393,12 +390,37 @@ function updateChart(bars, n, colorScale){
 //function to highlight enumeration units and bars
 function highlight(props){
 	//var ntaname = expressed.ntaname
-	var selected = d3.selectAll(".manhatan")//(props.properties.ntacode)//props.ntaname)
+	var selected = d3.selectAll("." + props.ntacode)
 		//change stroke
 		.style("stroke", "blue")
 		.style("stroke-width", "2");
 	//console.log(".manhattan")
 	setLabel(props);
+};
+
+//function to reset the element style on mouseout
+function dehighlight(props){
+	var selected = d3.selectAll("." + props.ntacode)//ntacode")
+		.style("stroke", function(){
+				return getStyle(this, "stroke")
+			})
+		.style("stroke-width", function(){
+				return getStyle(this, "stroke-width")
+		});
+
+	function getStyle(element, styleName){
+		var styleText = d3.select(element)
+			.select("desc")
+			.text();
+
+		var styleObject = JSON.parse(styleText);
+
+		return styleObject[styleName];
+	};
+
+ 	//remove info label
+	d3.select(".infolabel")
+		.remove();
 };
 
 //function to create dynamic label
@@ -427,33 +449,7 @@ function setLabel(props){
 		.style("top", y + "px");
 };
 
-//function to reset the element style on mouseout
-function dehighlight(props){
-	var selected = d3.selectAll("props.ntacode")
-		.style({
-			"stroke": function(){
-				return getStyle(this, "stroke")
-			},
-			"stroke-width": function(){
-				return getStyle(this, "stroke-width")
-			}
-		});
-	//console.log(props.adm1_code);
 
-	function getStyle(element, styleName){
-		var styleText = d3.select(element)
-			.select("desc")
-			.text();
-
-		var styleObject = JSON.parse(styleText);
-
-		return styleObject[styleName];
-	};
-
- 	//remove info label
-	d3.select(".infolabel")
-		.remove();
-};
 
 //function to move info label with mouse
 function moveLabel(){
@@ -472,6 +468,7 @@ function moveLabel(){
 
 	//horizontal label coordinate, testing for overflow
 	var x = d3.event.clientX > window.innerWidth - labelWidth - 20 ? x2 : x1; 
+	
 	//vertical label coordinate, testing for overflow
 	var y = d3.event.clientY < 75 ? y2 : y1; 
 
